@@ -45,6 +45,10 @@
 #include <sys/syscall.h>
 #endif
 
+#ifdef __APPLE__
+#include <libproc.h>
+#endif
+
 #ifdef __FreeBSD__
 #include <sys/sysctl.h>
 #include <sys/user.h>
@@ -332,7 +336,11 @@ void qemu_init_exec_dir(const char *argv0)
 {
     char *dir;
     char *p = NULL;
+#if defined(__APPLE__)
+    char buf[PROC_PIDPATHINFO_MAXSIZE];
+#else
     char buf[PATH_MAX];
+#endif
 
     assert(!exec_dir[0]);
 
@@ -342,6 +350,14 @@ void qemu_init_exec_dir(const char *argv0)
         len = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
         if (len > 0) {
             buf[len] = 0;
+            p = buf;
+        }
+    }
+#elif defined(__APPLE__)
+    {
+        int len;
+        len = proc_pidpath(getpid(), buf, sizeof(buf));
+        if (len > 0) {
             p = buf;
         }
     }
