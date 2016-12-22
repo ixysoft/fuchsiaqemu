@@ -3707,7 +3707,27 @@ fi
 for i in $glib_modules; do
     if $pkg_config --atleast-version=$glib_req_ver $i; then
         glib_cflags=$($pkg_config --cflags $i)
-        glib_libs=$($pkg_config --libs $i)
+        if test "$darwin" = "yes"; then
+          libdirs=()
+          glib_libs=()
+          for l in $(pkg-config --static --libs $i); do
+            case "${l}" in
+              -L*) libdirs+=("-B${l#-L}") ;;
+              -l*)
+                lib="$($cc ${libdirs[@]} -print-file-name=lib${l#-l}.a)"
+                if [[ -f ${lib} ]]; then
+                  glib_libs+=("${lib}")
+                else
+                 glib_libs+=("${l}")
+                fi
+                ;;
+              *) glib_libs+=("${l}")
+            esac
+          done
+          glib_libs="${glib_libs[@]}"
+        else
+          glib_libs=$($pkg_config --libs $i)
+        fi
         QEMU_CFLAGS="$glib_cflags $QEMU_CFLAGS"
         LIBS="$glib_libs $LIBS"
         libs_qga="$glib_libs $libs_qga"
