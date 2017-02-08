@@ -451,6 +451,8 @@ jemalloc="no"
 replication="yes"
 vxhs=""
 libxml2=""
+tasn1="yes"
+x11=""
 
 supported_cpu="no"
 supported_os="no"
@@ -971,7 +973,9 @@ for opt do
   ;;
   --disable-sdl) sdl="no"
   ;;
-  --enable-sdl) sdl="yes"
+  --enable-sdl) sdl="system"
+  ;;
+  --enable-sdl=*) sdl="$optarg"
   ;;
   --with-sdlabi=*) sdlabi="$optarg"
   ;;
@@ -1155,6 +1159,10 @@ for opt do
   ;;
   --enable-fdt) fdt="yes"
   ;;
+  --with-system-fdt) fdt="system"
+  ;;
+  --without-system-fdt) fdt="internal"
+  ;;
   --disable-linux-aio) linux_aio="no"
   ;;
   --enable-linux-aio) linux_aio="yes"
@@ -1214,6 +1222,10 @@ for opt do
   --disable-rbd) rbd="no"
   ;;
   --enable-rbd) rbd="yes"
+  ;;
+  --disable-x11) x11="no"
+  ;;
+  --enable-x11) x11="yes"
   ;;
   --disable-xfsctl) xfs="no"
   ;;
@@ -1375,6 +1387,10 @@ for opt do
   --enable-git-update) git_update=yes
   ;;
   --disable-git-update) git_update=no
+  ;;
+  --disable-tasn1) tasn1="no"
+  ;;
+  --enable-tasn1) tasn1="yes"
   ;;
   *)
       echo "ERROR: unknown option $opt"
@@ -2533,10 +2549,14 @@ fi
 
 ##########################################
 # X11 probe
-if $pkg_config --exists "x11"; then
-    have_x11=yes
-    x11_cflags=$($pkg_config --cflags x11)
-    x11_libs=$($pkg_config --libs x11)
+if test "$x11" != "no"; then
+  have_x11=yes
+  x11_cflags=
+  x11_libs=-lX11
+  if $pkg_config --exists "x11"; then
+      x11_cflags=$($pkg_config --cflags x11)
+      x11_libs=$($pkg_config --libs x11)
+  fi
 fi
 
 ##########################################
@@ -2781,14 +2801,15 @@ fi
 ##########################################
 # libtasn1 - only for the TLS creds/session test suite
 
-tasn1=yes
 tasn1_cflags=""
 tasn1_libs=""
-if $pkg_config --exists "libtasn1"; then
-    tasn1_cflags=$($pkg_config --cflags libtasn1)
-    tasn1_libs=$($pkg_config --libs libtasn1)
-else
-    tasn1=no
+if test "$tasn1" = "yes" ; then
+    if $pkg_config --exists "libtasn1"; then
+        tasn1_cflags=$($pkg_config --cflags libtasn1)
+        tasn1_libs=$($pkg_config --libs libtasn1)
+    else
+        tasn1=no
+    fi
 fi
 
 
@@ -2882,7 +2903,6 @@ sdl_probe ()
   if test -n "$cross_prefix" && test "$(basename "$sdlconfig")" = sdl-config; then
     echo warning: using "\"$sdlconfig\"" to detect cross-compiled sdl >&2
   fi
-
   cat > $TMPC << EOF
 #include <SDL.h>
 #undef main /* We don't want SDL to override our main() */
@@ -3776,6 +3796,10 @@ if test "$fdt" != "no" ; then
 int main(void) { fdt_first_subnode(0, 0); return 0; }
 EOF
   if compile_prog "" "$fdt_libs" ; then
+    # system DTC is good - use it
+    fdt_system=yes
+  fi
+  if test "$fdt" = "system" -a "$fdt_system" = "yes" ; then
     # system DTC is good - use it
     fdt=yes
   else
