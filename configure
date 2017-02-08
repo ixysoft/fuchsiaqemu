@@ -504,6 +504,7 @@ debug_mutex="no"
 libpmem=""
 default_devices="yes"
 plugins="no"
+tasn1="yes"
 
 supported_cpu="no"
 supported_os="no"
@@ -889,6 +890,7 @@ Linux)
   QEMU_INCLUDES="-I\$(SRC_PATH)/linux-headers -I$PWD/linux-headers $QEMU_INCLUDES"
   supported_os="yes"
   libudev="yes"
+  x11=""
 ;;
 esac
 
@@ -1061,7 +1063,9 @@ for opt do
   ;;
   --disable-sdl) sdl="no"
   ;;
-  --enable-sdl) sdl="yes"
+  --enable-sdl) sdl="system"
+  ;;
+  --enable-sdl=*) sdl="$optarg"
   ;;
   --disable-sdl-image) sdl_image="no"
   ;;
@@ -1252,6 +1256,10 @@ for opt do
   ;;
   --enable-fdt) fdt="yes"
   ;;
+  --with-system-fdt) fdt="system"
+  ;;
+  --without-system-fdt) fdt="internal"
+  ;;
   --disable-linux-aio) linux_aio="no"
   ;;
   --enable-linux-aio) linux_aio="yes"
@@ -1311,6 +1319,10 @@ for opt do
   --disable-rbd) rbd="no"
   ;;
   --enable-rbd) rbd="yes"
+  ;;
+  --disable-x11) x11="no"
+  ;;
+  --enable-x11) x11="yes"
   ;;
   --disable-xfsctl) xfs="no"
   ;;
@@ -1538,6 +1550,10 @@ for opt do
   --enable-plugins) plugins="yes"
   ;;
   --disable-plugins) plugins="no"
+  ;;
+  --disable-tasn1) tasn1="no"
+  ;;
+  --enable-tasn1) tasn1="yes"
   ;;
   *)
       echo "ERROR: unknown option $opt"
@@ -2771,10 +2787,14 @@ fi
 
 ##########################################
 # X11 probe
-if $pkg_config --exists "x11"; then
-    have_x11=yes
-    x11_cflags=$($pkg_config --cflags x11)
-    x11_libs=$($pkg_config --libs x11)
+if test "$x11" != "no"; then
+  have_x11=yes
+  x11_cflags=
+  x11_libs=-lX11
+  if $pkg_config --exists "x11"; then
+      x11_cflags=$($pkg_config --cflags x11)
+      x11_libs=$($pkg_config --libs x11)
+  fi
 fi
 
 ##########################################
@@ -2976,14 +2996,15 @@ fi
 ##########################################
 # libtasn1 - only for the TLS creds/session test suite
 
-tasn1=yes
 tasn1_cflags=""
 tasn1_libs=""
-if $pkg_config --exists "libtasn1"; then
-    tasn1_cflags=$($pkg_config --cflags libtasn1)
-    tasn1_libs=$($pkg_config --libs libtasn1)
-else
-    tasn1=no
+if test "$tasn1" = "yes" ; then
+    if $pkg_config --exists "libtasn1"; then
+        tasn1_cflags=$($pkg_config --cflags libtasn1)
+        tasn1_libs=$($pkg_config --libs libtasn1)
+    else
+        tasn1=no
+    fi
 fi
 
 
