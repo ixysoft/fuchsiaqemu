@@ -208,6 +208,11 @@ load_kernel:
 	bswap		%eax
 	add		$4, %dx
 	out		%eax, (%dx)
+.Lwait_for_dma:
+	mov -16(%bp), %eax
+	bswap %eax
+	test $~1, %eax
+	jnz .Lwait_for_dma
 
 	mov		%ebp, %esp
 
