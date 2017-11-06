@@ -291,6 +291,7 @@ iasl="iasl"
 interp_prefix="/usr/gnemul/qemu-%M"
 static="no"
 cross_prefix=""
+host=""
 audio_drv_list=""
 block_drv_rw_whitelist=""
 block_drv_ro_whitelist=""
@@ -520,6 +521,8 @@ for opt do
   --cc=*) CC="$optarg"
   ;;
   --cxx=*) CXX="$optarg"
+  ;;
+  --host=*) host="$optarg"
   ;;
   --cpu=*) cpu="$optarg"
   ;;
@@ -958,6 +961,8 @@ for opt do
   --interp-prefix=*) interp_prefix="$optarg"
   ;;
   --cross-prefix=*)
+  ;;
+  --host=*)
   ;;
   --cc=*)
   ;;
@@ -2877,8 +2882,8 @@ has_libgcrypt() {
 
     if test -n "$cross_prefix"
     then
-	host=$(libgcrypt-config --host)
-	if test "$host-" != $cross_prefix
+	libgcrypt_host=$(libgcrypt-config --host)
+	if test "$libgcrypt_host-" != $cross_prefix
 	then
 	    return 1
 	fi
