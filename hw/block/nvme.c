@@ -29,6 +29,7 @@
 #include "qemu/units.h"
 #include "hw/block/block.h"
 #include "hw/hw.h"
+#include "hw/pci/msi.h"
 #include "hw/pci/msix.h"
 #include "hw/pci/pci.h"
 #include "sysemu/sysemu.h"
@@ -109,7 +110,9 @@ static void nvme_irq_check(NvmeCtrl *n)
 static void nvme_irq_assert(NvmeCtrl *n, NvmeCQueue *cq)
 {
     if (cq->irq_enabled) {
-        if (msix_enabled(&(n->parent_obj))) {
+        if (msi_enabled(&(n->parent_obj))) {
+            msi_notify(&(n->parent_obj), cq->vector);
+        } else if (msix_enabled(&(n->parent_obj))) {
             trace_nvme_irq_msix(cq->vector);
             msix_notify(&(n->parent_obj), cq->vector);
         } else {
@@ -1249,6 +1252,7 @@ static void nvme_realize(PCIDevice *pci_dev, Error **errp)
         PCI_BASE_ADDRESS_SPACE_MEMORY | PCI_BASE_ADDRESS_MEM_TYPE_64,
         &n->iomem);
     msix_init_exclusive_bar(&n->parent_obj, n->num_queues, 4, NULL);
+    msi_init(&n->parent_obj, 0, n->num_queues, true, false, NULL);
 
     id->vid = cpu_to_le16(pci_get_word(pci_conf + PCI_VENDOR_ID));
     id->ssvid = cpu_to_le16(pci_get_word(pci_conf + PCI_SUBSYSTEM_VENDOR_ID));
@@ -1338,13 +1342,14 @@ static void nvme_exit(PCIDevice *pci_dev)
         g_free(n->cmbuf);
     }
     msix_uninit_exclusive_bar(pci_dev);
+    msi_uninit(&n->parent_obj);
 }
 
 static Property nvme_props[] = {
     DEFINE_BLOCK_PROPERTIES(NvmeCtrl, conf),
     DEFINE_PROP_STRING("serial", NvmeCtrl, serial),
     DEFINE_PROP_UINT32("cmb_size_mb", NvmeCtrl, cmb_size_mb, 0),
-    DEFINE_PROP_UINT32("num_queues", NvmeCtrl, num_queues, 64),
+    DEFINE_PROP_UINT32("num_queues", NvmeCtrl, num_queues, 32),
     DEFINE_PROP_END_OF_LIST(),
 };
 
